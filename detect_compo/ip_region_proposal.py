@@ -40,7 +40,7 @@ def nesting_inspection(org, grey, compos, ffl_block):
 def compo_detection(input_img_path, output_root, uied_params,
                     resize_by_height=800, classifier=None, show=False, wai_key=0):
 
-    start = time.clock()
+    start = time.time()
     name = input_img_path.split('/')[-1][:-4] if '/' in input_img_path else input_img_path.split('\\')[-1][:-4]
     ip_root = file.build_directory(pjoin(output_root, "ip"))
 
@@ -54,7 +54,7 @@ def compo_detection(input_img_path, output_root, uied_params,
 
     # *** Step 3 *** results refinement
     uicompos = det.compo_filter(uicompos, min_area=int(uied_params['min-ele-area']), img_shape=binary.shape)
-    uicompos = det.merge_intersected_compos(uicompos)
+    uicompos = det.merge_intersected_compos(uicompos)  # collision will have issues
     det.compo_block_recognition(binary, uicompos)
     if uied_params['merge-contained-ele']:
         uicompos = det.rm_contained_compos_not_in_block(uicompos)
@@ -88,4 +88,4 @@ def compo_detection(input_img_path, output_root, uied_params,
     # *** Step 7 *** save detection result
     Compo.compos_update(uicompos, org.shape)
     file.save_corners_json(pjoin(ip_root, name + '.json'), uicompos)
-    print("[Compo Detection Completed in %.3f s] Input: %s Output: %s" % (time.clock() - start, input_img_path, pjoin(ip_root, name + '.json')))
+    print("[Compo Detection Completed in %.3f s] Input: %s Output: %s" % (time.time() - start, input_img_path, pjoin(ip_root, name + '.json')))

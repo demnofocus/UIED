@@ -1,5 +1,6 @@
-import detect_text.ocr as ocr
+# import detect_text.ocr as ocr
 from detect_text.Text import Text
+import detect_text.easy_ocr as easyocr
 import cv2
 import json
 import time
@@ -106,6 +107,35 @@ def text_cvt_orc_format(ocr_result):
     return texts
 
 
+def cleanup_text(text):
+    # strip out non-ASCII text
+    # using OpenCV
+    return "".join([c if ord(c) < 128 else "" for c in text]).strip()
+
+
+def text_cvt_easy_orc_format(ocr_result):
+    texts = []
+    if ocr_result is not None:
+        for i in enumerate(ocr_result):
+            for (bbox, content, prob) in ocr_result:
+                (tl, tr, br, bl) = bbox
+                tl = (int(tl[0]), int(tl[1]))
+                tr = (int(tr[0]), int(tr[1]))
+                br = (int(br[0]), int(br[1]))
+                bl = (int(bl[0]), int(bl[1]))
+                # cleanup the text and draw the box surrounding the text along
+                # with the OCR'd text itself
+                content = cleanup_text(content)
+                # cv2.rectangle(image, tl, br, (0, 255, 0), 2)
+                # cv2.putText(image, text, (tl[0], tl[1] - 10),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                location = {'left': int(tl[0]), 'top': int(br[1]),
+                            'right': int(br[0]), 'bottom': int(tl[1])}
+                texts.append(Text(i, content, location))
+
+    return texts
+
+
 def text_filter_noise(texts):
     valid_texts = []
     for text in texts:
@@ -116,19 +146,21 @@ def text_filter_noise(texts):
 
 
 def text_detection(input_file='../data/input/30800.jpg', output_file='../data/output', show=False):
-    start = time.clock()
+    start = time.time()
     name = input_file.split('/')[-1][:-4]
     ocr_root = pjoin(output_file, 'ocr')
     img = cv2.imread(input_file)
 
-    ocr_result = ocr.ocr_detection_google(input_file)
-    texts = text_cvt_orc_format(ocr_result)
+    # ocr_result = ocr.ocr_detection_google(input_file)
+    ocr_result = easyocr.detect_easyocr(input_file)
+    texts = text_cvt_easy_orc_format(ocr_result)
+    # texts = easyocr.detect_easyocr(input_file)
     texts = merge_intersected_texts(texts)
     texts = text_filter_noise(texts)
     texts = text_sentences_recognition(texts)
     visualize_texts(img, texts, shown_resize_height=800, show=show, write_path=pjoin(ocr_root, name+'.png'))
     save_detection_json(pjoin(ocr_root, name+'.json'), texts, img.shape)
-    print("[Text Detection Completed in %.3f s] Input: %s Output: %s" % (time.clock() - start, input_file, pjoin(ocr_root, name+'.json')))
+    print("[Text Detection Completed in %.3f s] Input: %s Output: %s" % (time.time() - start, input_file, pjoin(ocr_root, name+'.json')))
 
 
 # text_detection()
